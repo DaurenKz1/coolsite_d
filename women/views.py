@@ -2,10 +2,10 @@ from django.http import HttpResponse, HttpResponseNotFound, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from .forms import *
 from .models import *
-from .utils import DataMixin
+from .utils import DataMixin, MyMixin
 
 menu = [{'title': "О сайте", 'url_name': 'about'},
         {'title': "Добавить статью", 'url_name': 'add_page'},
@@ -46,12 +46,16 @@ def about(request):
     return render(request, 'women/about.html', {'menu': menu, 'title': 'О сайте'})
 
 
-class AddPage(LoginRequiredMixin, DataMixin, CreateView):
+class AddPage(LoginRequiredMixin, PermissionRequiredMixin, DataMixin, CreateView):
     # login_url = reverse_lazy('login')
     login_url = '/admin/'
     form_class = AddPostForm
     template_name = 'women/addpage.html'
     success_url = reverse_lazy('home')
+    permission_required = ('some.permission',)
+
+    def handle_no_permission(self):
+        return redirect(self.login_url)
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -93,15 +97,15 @@ def pageNotFound(request, exception):
 #
 #     return render(request, 'women/post.html', context=context)
 
-class ShowPost(DataMixin, DetailView):
+class ShowPost(DataMixin, MyMixin, DetailView):
     model = Women
     template_name = 'women/post.html'
     slug_url_kwarg = 'post_slug'
-    context_object_name = 'post'
+
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
-        c_def = self.get_user_context(title=context['post'])
+        c_def = self.get_user_context(title=context['Kids'])
         return dict(list(context.items()) + list(c_def.items()))
 
 
